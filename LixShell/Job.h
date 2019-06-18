@@ -5,6 +5,7 @@
 #include <stdexcept>
 #include <fcntl.h>
 #include <cstdlib>
+#include <iostream>
 
 class Job
 {
@@ -18,6 +19,11 @@ public:
 		output_filename = filename;
 	}
 
+    void redirect_input_to_file(const std::string& filename) {
+        input = RedirectType::FILE;
+        input_filename = filename;
+    }
+
 	pid_t run() {
 		pid_t pid = fork();
 		if(pid<0) {
@@ -28,9 +34,24 @@ public:
 				dup2(output_fd, STDOUT_FILENO);
 				dup2(output_fd, STDERR_FILENO);
 			}
+            if (input == RedirectType::FILE) {
+                int input_fd = open(input_filename.c_str(), O_RDONLY);
+                if(input_fd==-1) {
+                    std::cout << errno << std::endl;
+                }
+                dup2(input_fd, STDIN_FILENO);
+            }
 			execute(command);
 		}
 		return pid;
+	}
+
+    std::string program() {
+        return command[0];
+	}
+
+    argv_t commands() {
+        return command;
 	}
 
 private:

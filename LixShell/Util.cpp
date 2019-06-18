@@ -5,6 +5,8 @@
 #include <vector>
 #include <cstring>
 #include <stdexcept>
+#include <ostream>
+#include <iostream>
 
 using namespace std;
 
@@ -51,7 +53,17 @@ void execute(const vector<std::string> command) {
 	}
 	argv[command.size()] = nullptr;
 
-	execvp(("/bin/" + command[0]).c_str(), argv);
-	exit(0);
+	int ret = execvp(command[0].c_str(), argv);
+	if(ret==-1) {
+		switch (errno) {
+		case ENOENT:
+			std::cout << "No such file or directory." << std::endl;
+			break;
+		default:
+			std::cout << "Unknown error." << std::endl;
+		}
+	}
+	
+	exit(-1);
 
 }
