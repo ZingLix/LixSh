@@ -1,6 +1,8 @@
 #pragma once
 #include <string>
 #include <vector>
+#include "Util.h"
+#include "Job.h"
 
 class Shell
 {
@@ -12,7 +14,7 @@ public:
     void child_terminated(pid_t pid);
 
 private:
-    using argv_t = std::vector<std::string>;
+
 
     enum class builtin_cmd{
         cd,none
@@ -21,7 +23,7 @@ private:
 	void init();
     void signal_init();
 	void print_info();
-	std::vector<std::string> split_str(const std::string& str);
+	std::pair<std::vector<Job>, bool> parse(const std::string& str);
     builtin_cmd builtin_type(const std::string& str);
     void run_builtin(builtin_cmd cmd, const argv_t& argv);
 

@@ -5,6 +5,8 @@
 #include <unistd.h>
 #include <iostream>
 #include <string>
+#include <algorithm>
+#include "Job.h"
 using namespace std;
 
 Shell* current_shell=nullptr;
@@ -22,20 +24,20 @@ Shell::Shell(const char* path)
 void Shell::loop() {
 	string str;
 	while (status_) {
-        bool bg=false;
 		print_info();
 		cout << prefix_ << " ";
 		getline(cin,str,'\n');
-		auto vec = split_str(str);
-        if(vec.back()=="&") {
-            bg=true;
-            vec.pop_back();
-        }
-        builtin_cmd type=builtin_type(vec[0]);
-        if(type!=builtin_cmd::none){
-            run_builtin(type,vec);
-        }
-		auto pid = execute(vec);
+		auto [jobs,bg] = parse(str);
+		auto pid = jobs[0].run();
+		//      if(vec.back()=="&") {
+  //          bg=true;
+  //          vec.pop_back();
+  //      }
+  //      builtin_cmd type=builtin_type(vec[0]);
+  //      if(type!=builtin_cmd::none){
+  //          run_builtin(type,vec);
+  //      }
+		//auto pid = execute(vec);
         if(bg) cout << "Running in background: [pid]"<<pid<<endl;
         else waitpid(pid, NULL, 0);
 		cout << endl;
@@ -73,23 +75,38 @@ void Shell::print_info() {
 	cout << "# " << username_ << " @ " << hostname_ << " : " << cur_path_ << endl;
 }
 
-std::vector<std::string> Shell::split_str(const std::string& str) {
+std::pair<std::vector<Job>,bool> Shell::parse(const std::string& str) {
 	std::vector<std::string> list;
 	auto last_it = str.begin();
-	bool is_space = str[0] == ' ';
+	auto bg = false;
 	for (auto it = str.begin(); it != str.end(); ++it) {
-		if (*it == ' '&&!is_space) {
-			list.push_back(string(last_it, it));
-			is_space = true;
-		}
-		if(*it!=' '&&is_space) {
-			is_space = false;
-			last_it = it;
+		if(*it=='|'||*it=='>'||*it=='<'||*it=='&') {
+			list.emplace_back(last_it, it);
+			list.emplace_back(string(1,*it));
+			last_it = it + 1;
+			if (*it == '&') bg = true;
 		}
 	}
-	if(str.back()!=' ')
-		list.push_back(string(last_it, str.end()));
-	return list;
+	std::string lastone = std::string(last_it, str.end());
+	if (count(lastone.begin(),lastone.end(),' ')!=lastone.length())
+		list.push_back(move(lastone));
+	if (bg && list.back() != "&") throw std::logic_error("Invalid input.");
+	std::vector<Job> jobs;
+	for (auto it = list.begin(); it != list.end();++it) {
+		if(*it==">") {
+			if(jobs.size()==0)throw std::logic_error("Invalid input.");
+			++it;
+			jobs.back().redirect_output_to_file([&]() {
+				auto first = it->find_first_not_of(" ");
+				auto last = it->find_last_not_of(" ");
+				auto tmp = string(it->begin()+first, it->begin()+last+1);
+				return tmp;
+			}());
+		}else {
+			jobs.emplace_back(*it);
+		}
+	}
+	return { jobs,bg };
 }
 
 void Shell::child_terminated(pid_t pid){
