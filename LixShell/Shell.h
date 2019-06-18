@@ -1,6 +1,8 @@
 #pragma once
 #include <string>
 #include <vector>
+#include <map>
+#include <memory>
 #include "Util.h"
 #include "Job.h"
 
@@ -23,7 +25,7 @@ private:
 	void init();
     void signal_init();
 	void print_info();
-	std::pair<std::vector<Job>, bool> parse(const std::string& str);
+	std::pair<std::vector<std::unique_ptr<Job>>, bool> parse(const std::string& str);
     builtin_cmd builtin_type(const std::string& str);
     void run_builtin(builtin_cmd cmd, const argv_t& argv);
 
@@ -34,4 +36,5 @@ private:
 	std::string hostname_;
 	char prefix_;
 	std::string cur_path_;
+    std::map<pid_t, std::unique_ptr<Job>> job_map_;
 };

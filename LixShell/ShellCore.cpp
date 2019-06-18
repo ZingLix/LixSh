@@ -6,6 +6,7 @@
 #include <iostream>
 #include <string>
 #include <algorithm>
+#include <map>
 #include "Job.h"
 using namespace std;
 
@@ -28,23 +29,29 @@ void Shell::loop() {
         cout << prefix_ << " ";
         getline(cin, str, '\n');
         auto [jobs, bg] = parse(str);
-        //      if(vec.back()=="&") {
-  //          bg=true;
-  //          vec.pop_back();
-  //      }
-        builtin_cmd type=builtin_type(jobs[0].program());
-        if(type!=builtin_cmd::none){
-            run_builtin(type,jobs[0].commands());
-        }else {
-            auto pid = jobs[0].run();
+        if (jobs.size() == 0) { cout << endl; continue; }
+        builtin_cmd type = builtin_type(jobs[0]->program());
+        if (type != builtin_cmd::none) {
+            run_builtin(type, jobs[0]->commands());
+        } else {
+            pid_t pid;
+            if (bg) cout << "Running in background: " << endl;
+            for (auto& j : jobs) {
+                pid = j->run();
+                job_map_[pid] = move(j);
+                job_map_.insert(make_pair(pid, move(j)));
+                if (bg) {
+                    job_map_[pid]->go_background();
+                    cout << "\t[pid] " << pid << "\t" << job_map_[pid]->raw_command() << endl;
+                }
+            }
             int status;
-            if (bg) cout << "Running in background: [pid]" << pid << endl;
-            else {
+            if (!bg) {
                 waitpid(pid, &status, 0);
-                //		cout << status<<endl;
+                child_terminated(pid);
             }
         }
-        
+
         cout << endl;
     }
 }
@@ -80,7 +87,7 @@ void Shell::print_info() {
     cout << "# " << username_ << " @ " << hostname_ << " : " << cur_path_ << endl;
 }
 
-std::pair<std::vector<Job>, bool> Shell::parse(const std::string& str) {
+std::pair<std::vector<std::unique_ptr<Job>>, bool> Shell::parse(const std::string& str) {
     std::vector<std::string> list;
     auto trim = [](const std::string& str) {
         auto first = str.find_first_not_of(" ");
@@ -98,26 +105,40 @@ std::pair<std::vector<Job>, bool> Shell::parse(const std::string& str) {
         }
     }
     std::string lastone = std::string(last_it, str.end());
-    if (count(lastone.begin(), lastone.end(), ' ') != lastone.length())
+    if (count(lastone.begin(), lastone.end(), ' ') != static_cast<int> (lastone.length()))
         list.push_back(move(lastone));
     if (bg && list.back() != "&") throw std::logic_error("Invalid input.");
-    std::vector<Job> jobs;
+    if (list.size() == 0) return{ std::vector<std::unique_ptr<Job>>(),false };
+    int pip[2];
+    bool valid = false;
+    std::vector<std::unique_ptr<Job>> jobs;
     for (auto it = list.begin(); it != list.end(); ++it) {
         if (*it == ">") {
             if (jobs.size() == 0)throw std::logic_error("Invalid input.");
-            jobs.back().redirect_output_to_file(trim(*++it));
+            jobs.back()->redirect_output_to_file(trim(*++it));
         } else if (*it == "<") {
             if (jobs.size() == 0)throw std::logic_error("Invalid input.");
-            jobs.back().redirect_input_to_file(trim(*++it));
-        } else {
-            jobs.emplace_back(*it);
+            jobs.back()->redirect_input_to_file(trim(*++it));
+        } else if (*it == "|") {
+            pipe(pip);
+            valid = true;
+            jobs.back()->redirect_output_to_pipe(pip);
+        } else if (*it == "&") {} else {
+            jobs.push_back(make_unique<Job>(*it));
+            if (valid) {
+                valid = false;
+                jobs.back()->redirect_input_to_pipe(pip);
+            }
         }
     }
-    return { jobs,bg };
+    return { move(jobs),bg };
 }
 
 void Shell::child_terminated(pid_t pid) {
-    cout << "Process terminated: [pid]" << pid << endl;
+    if (job_map_[pid]->is_background()) {
+        cout << "[pid] " << pid << "\tterminated\t" << job_map_[pid]->raw_command() << endl;
+    }
+    job_map_.erase(job_map_.find(pid));
 }
 
 Shell::builtin_cmd Shell::builtin_type(const std::string& str) {
