@@ -4,7 +4,8 @@
 #include <sys/types.h>
 
 using argv_t = std::vector<std::string>;
-std::vector<std::string> program_list;
+extern std::vector<std::string> program_list;
+
 std::string get_username();
 std::string get_hostname();
 

@@ -60,6 +60,42 @@ void Shell::loop() {
     }
 }
 
+char* command_generator(const char* text,int state){
+    static int list_index;
+	string src(text);
+    char *name;
+
+    if (state==0){
+      list_index = 0;
+
+	auto it = program_list.begin();
+  	while (true)
+    {
+		if((*it)[0]==src[0]&& it->find(src)==0) {
+			list_index=it-program_list.begin();
+
+		return strdup(it->c_str());
+		}
+++it;
+    }
+}else{
+	auto it = program_list.begin()+list_index+state;
+	if(it->find(src)==0){
+		return strdup(it->c_str());
+	}
+}
+  /* If no names matched, then return NULL. */
+  return ((char *)NULL);
+}
+
+char** completer(const char*text,int start,int end){
+	char **matches=nullptr;
+	if(start==0)
+		matches=rl_completion_matches(text,command_generator);
+
+	return matches;
+}
+
 void Shell::init() {
     if (current_shell != nullptr) {
         throw std::runtime_error("Another shell is running");
@@ -72,6 +108,7 @@ void Shell::init() {
     cur_path_ = get_path();
     signal_init();
     initialize_program_list();
+	 rl_attempted_completion_function = completer;
 }
 
 void sigchld_handler(int sig) {
@@ -179,3 +216,4 @@ void Shell::builtin_cd(const argv_t& argv) {
         cout << e.what() << endl;
     }
 }
+

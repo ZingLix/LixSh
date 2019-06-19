@@ -1,6 +1,7 @@
 #include "Util.h"
 #include <unistd.h>
 #include <cstdlib>
+#include <algorithm>
 #include <string>
 #include <vector>
 #include <cstring>
@@ -13,7 +14,7 @@ using namespace std;
 
 constexpr int MAX_SIZE = 64;
 constexpr int BUFFER_SIZE = 1024;
-
+std::vector<std::string> program_list;
 string get_username() {
 	return string(getenv("USER"));
 }
@@ -74,4 +75,5 @@ void initialize_program_list(){
     std::string path = "/usr/bin/";
     for (const auto& entry : fs::directory_iterator(path))
         program_list.push_back(entry.path().filename().string());
+    std::sort(program_list.begin(),program_list.end());
 }
