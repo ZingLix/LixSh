@@ -7,6 +7,8 @@
 #include <string>
 #include <algorithm>
 #include <map>
+#include <readline/readline.h>
+#include <readline/history.h>
 #include "Job.h"
 using namespace std;
 
@@ -23,11 +25,13 @@ Shell::Shell(const char* path)
 
 
 void Shell::loop() {
-    string str;
     while (status_) {
         print_info();
-        cout << prefix_ << " ";
-        getline(cin, str, '\n');
+        char* line = readline(prefix_.c_str());
+       // getline(cin, str, '\n');
+        string str(line);
+        add_history(line);
+        free(line);
         auto [jobs, bg] = parse(str);
         if (jobs.size() == 0) { cout << endl; continue; }
         builtin_cmd type = builtin_type(jobs[0]->program());
@@ -64,9 +68,10 @@ void Shell::init() {
     status_ = true;
     username_ = get_username();
     hostname_ = get_hostname();
-    prefix_ = username_ == "root" ? '#' : '$';
+    prefix_ = username_ == "root" ? "# " : "$ ";
     cur_path_ = get_path();
     signal_init();
+    initialize_program_list();
 }
 
 void sigchld_handler(int sig) {

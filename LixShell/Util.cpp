@@ -7,6 +7,7 @@
 #include <stdexcept>
 #include <ostream>
 #include <iostream>
+#include <experimental/filesystem>
 
 using namespace std;
 
@@ -63,7 +64,14 @@ void execute(const vector<std::string> command) {
 			std::cout << "Unknown error." << std::endl;
 		}
 	}
-	
 	exit(-1);
+}
 
+
+namespace fs = std::experimental::filesystem;
+void initialize_program_list(){
+    program_list.clear();
+    std::string path = "/usr/bin/";
+    for (const auto& entry : fs::directory_iterator(path))
+        program_list.push_back(entry.path().filename().string());
 }

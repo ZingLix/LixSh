@@ -34,7 +34,7 @@ private:
 	bool status_;
 	std::string username_;
 	std::string hostname_;
-	char prefix_;
+    std::string prefix_;
 	std::string cur_path_;
     std::map<pid_t, std::unique_ptr<Job>> job_map_;
 };
