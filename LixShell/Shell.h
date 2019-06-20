@@ -19,7 +19,7 @@ private:
 
 
     enum class builtin_cmd{
-        cd,none
+        cd,alias,unalias,none
     };
 
 	void init();
@@ -30,6 +30,10 @@ private:
     void run_builtin(builtin_cmd cmd, const argv_t& argv);
 
     void builtin_cd(const argv_t& argv);
+    void builtin_alias(const argv_t& argv);
+    void builtin_unalias(const argv_t& argv);
+
+    void alias(std::string& str);
 
 	bool status_;
 	std::string username_;
@@ -37,4 +41,5 @@ private:
     std::string prefix_;
 	std::string cur_path_;
     std::map<pid_t, std::unique_ptr<Job>> job_map_;
+    std::map<std::string, std::string> alias_map_;
 };

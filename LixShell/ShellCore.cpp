@@ -28,10 +28,11 @@ void Shell::loop() {
     while (status_) {
         print_info();
         char* line = readline(prefix_.c_str());
-       // getline(cin, str, '\n');
+        // getline(cin, str, '\n');
         string str(line);
         add_history(line);
         free(line);
+        alias(str);
         auto [jobs, bg] = parse(str);
         if (jobs.size() == 0) { cout << endl; continue; }
         builtin_cmd type = builtin_type(jobs[0]->program());
@@ -60,40 +61,39 @@ void Shell::loop() {
     }
 }
 
-char* command_generator(const char* text,int state){
+char* command_generator(const char* text, int state) {
     static int list_index;
-	string src(text);
-    char *name;
+    string src(text);
+    char* name;
 
-    if (state==0){
-      list_index = 0;
+    if (state == 0) {
+        list_index = 0;
 
-	auto it = program_list.begin();
-  	while (true)
-    {
-		if((*it)[0]==src[0]&& it->find(src)==0) {
-			list_index=it-program_list.begin();
+        auto it = program_list.begin();
+        while (true) {
+            if ((*it)[0] == src[0] && it->find(src) == 0) {
+                list_index = it - program_list.begin();
 
-		return strdup(it->c_str());
-		}
-++it;
+                return strdup(it->c_str());
+            }
+            ++it;
+        }
+    } else {
+        auto it = program_list.begin() + list_index + state;
+        if (it->find(src) == 0) {
+            return strdup(it->c_str());
+        }
     }
-}else{
-	auto it = program_list.begin()+list_index+state;
-	if(it->find(src)==0){
-		return strdup(it->c_str());
-	}
-}
-  /* If no names matched, then return NULL. */
-  return ((char *)NULL);
+    /* If no names matched, then return NULL. */
+    return ((char*)NULL);
 }
 
-char** completer(const char*text,int start,int end){
-	char **matches=nullptr;
-	if(start==0)
-		matches=rl_completion_matches(text,command_generator);
+char** completer(const char* text, int start, int end) {
+    char** matches = nullptr;
+    if (start == 0)
+        matches = rl_completion_matches(text, command_generator);
 
-	return matches;
+    return matches;
 }
 
 void Shell::init() {
@@ -108,7 +108,7 @@ void Shell::init() {
     cur_path_ = get_path();
     signal_init();
     initialize_program_list();
-	 rl_attempted_completion_function = completer;
+    rl_attempted_completion_function = completer;
 }
 
 void sigchld_handler(int sig) {
@@ -184,15 +184,24 @@ void Shell::child_terminated(pid_t pid) {
 }
 
 Shell::builtin_cmd Shell::builtin_type(const std::string& str) {
-    if (str == "cd") {
+    if (str == "cd")
         return builtin_cmd::cd;
-    }
+    if (str == "alias")
+        return builtin_cmd::alias;
+    if (str == "unalias")
+        return builtin_cmd::unalias;
     return builtin_cmd::none;
 }
 
 void Shell::run_builtin(Shell::builtin_cmd cmd, const argv_t& argv) {
     if (cmd == builtin_cmd::cd) {
         builtin_cd(argv);
+    }
+    if(cmd==builtin_cmd::alias) {
+        builtin_alias(argv);
+    }
+    if (cmd == builtin_cmd::unalias) {
+        builtin_unalias(argv);
     }
 }
 
@@ -217,3 +226,84 @@ void Shell::builtin_cd(const argv_t& argv) {
     }
 }
 
+void Shell::builtin_alias(const argv_t& argv) {
+    if(argv.size()<2) {
+        cout << "No enough arguments."<<endl;
+        return;
+    }
+    string src, target;
+    int start = 0;
+    for (auto it = argv[1].begin(); it != argv[1].end();++it) {
+        if(*it=='=') {
+            src = string(argv[1].begin(), it);
+            target = string(it + 1, argv[1].end());
+            start = 2;
+        }
+    }
+    if (target == "") {
+        target = argv[2];
+        start = 3;
+    }
+    if (src == "") {
+        src = argv[1];
+        start = 3;
+        if(argv.size()<3) {
+            cout << "No enough arguments." << endl;
+            return;
+        }
+        if(argv[2][0]!='=') {
+            cout << "Bad input." << endl;
+            return;
+        }
+        if(argv[2].length()==1) {
+            start = 4;
+            if (argv.size() < 4) {
+                cout << "No enough arguments." << endl;
+                return;
+            }
+            target = argv[3];
+        }else {
+            start = 3;
+            target = string(argv[2].begin() + 1, argv[2].end());
+        }
+    }
+    if(target[0]=='\'') {
+        if (argv.back().back() != '\'') {
+            cout << "Bad input." << endl;
+            return;
+        }
+        string tmp;
+        for (; start < argv.size();++start) {
+            tmp =tmp+" "+argv[start] ;
+        }
+        target += tmp;
+        target = string(target.begin() + 1, target.end() - 1);
+    }
+    cout << src << "  ->  " << target;
+    alias_map_[src] = target;
+}
+
+void Shell::builtin_unalias(const argv_t& argv) {
+    if(argv.size()<2) {
+        cout << "No enough arguments.";
+        return;
+    }
+    auto it = alias_map_.find(argv[1]);
+    if(it==alias_map_.end()) {
+        cout << "No alias named " << argv[1]<<"."<<endl;
+        return;
+    }
+    alias_map_.erase(it);
+    cout << "Unaliased: " << argv[1] << endl;
+}
+
+
+void Shell::alias(std::string& str) {
+    auto offset = str.find_first_of(' ');
+    if (offset == string::npos) offset = str.length();
+    string src(str.begin(),str.begin()+ offset);
+    auto it = alias_map_.find(src);
+    if(it!=alias_map_.end()) {
+        str = it->second + string(str.begin() + offset, str.end());
+    }
+}
