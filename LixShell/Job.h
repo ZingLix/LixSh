@@ -130,6 +130,9 @@ private:
             if(s[0]=='$'&&s.length()>1) {
                 s = get_environment(std::string(s.begin() + 1, s.end()));
             }
+            if(s[0]=='~') {
+                s = get_environment("HOME") + std::string(s.begin() + 1, s.end());
+            }
         }
 		return list;
 	}
