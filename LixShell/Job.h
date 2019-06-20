@@ -126,6 +126,11 @@ private:
 		}
 		if (str.back() != ' ')
 			list.push_back(std::string(last_it, str.end()));
+        for(auto&s:list) {
+            if(s[0]=='$'&&s.length()>1) {
+                s = get_environment(std::string(s.begin() + 1, s.end()));
+            }
+        }
 		return list;
 	}
 

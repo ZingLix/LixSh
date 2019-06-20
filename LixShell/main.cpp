@@ -1,6 +1,6 @@
 #include "Shell.h"
 
-int main(int argc, char* argv[])
+int main(int argc, char* argv[], char* envp[])
 {
 	Shell sh;
 	sh.loop();

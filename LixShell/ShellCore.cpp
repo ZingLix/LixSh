@@ -62,9 +62,8 @@ void Shell::loop() {
 }
 
 char* command_generator(const char* text, int state) {
-    static int list_index;
+    static std::size_t list_index;
     string src(text);
-    char* name;
 
     if (state == 0) {
         list_index = 0;
@@ -232,7 +231,7 @@ void Shell::builtin_alias(const argv_t& argv) {
         return;
     }
     string src, target;
-    int start = 0;
+    std::size_t start = 0;
     for (auto it = argv[1].begin(); it != argv[1].end();++it) {
         if(*it=='=') {
             src = string(argv[1].begin(), it);

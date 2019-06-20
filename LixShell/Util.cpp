@@ -15,6 +15,7 @@ using namespace std;
 constexpr int MAX_SIZE = 64;
 constexpr int BUFFER_SIZE = 1024;
 std::vector<std::string> program_list;
+
 string get_username() {
 	return string(getenv("USER"));
 }
@@ -44,6 +45,12 @@ void set_path(const std::string& path) {
 		}
 	}
 }
+
+std::string get_environment(const std::string& var) {
+    auto env = getenv(var.c_str());
+    return env==nullptr?string():string(env);
+}
+
 
 void execute(const vector<std::string> command) {
 	char* argv[MAX_SIZE];
