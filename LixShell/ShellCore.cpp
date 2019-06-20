@@ -189,6 +189,10 @@ Shell::builtin_cmd Shell::builtin_type(const std::string& str) {
         return builtin_cmd::alias;
     if (str == "unalias")
         return builtin_cmd::unalias;
+    if (str == "history")
+        return builtin_cmd::history;
+    if (str == "exit"||str=="logout"||str=="quit")
+        return builtin_cmd::exit;
     return builtin_cmd::none;
 }
 
@@ -201,6 +205,12 @@ void Shell::run_builtin(Shell::builtin_cmd cmd, const argv_t& argv) {
     }
     if (cmd == builtin_cmd::unalias) {
         builtin_unalias(argv);
+    }
+    if (cmd == builtin_cmd::history) {
+        builtin_history(argv);
+    }
+    if(cmd==builtin_cmd::exit) {
+        builtin_exit();
     }
 }
 
@@ -306,3 +316,27 @@ void Shell::alias(std::string& str) {
         str = it->second + string(str.begin() + offset, str.end());
     }
 }
+
+void Shell::builtin_history(const argv_t& argv) {
+    int start=history_base;
+    if (argv.size() > 1) {
+        int length;
+        try {
+            length = stoi(argv[1]);
+        }catch (std::invalid_argument& e) {
+            cout << "Invalid argument." << endl;
+            return;
+        }
+        
+        start = max(start, history_length-length+1);
+    }
+    for(auto i=start;i<=history_length;++i) {
+        cout << i - history_base << " \t " << history_get(i)->line << endl;
+    }
+}
+
+void Shell::builtin_exit() {
+    cout << "Bye." << endl;
+    exit(0);
+}
+

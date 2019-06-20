@@ -19,7 +19,7 @@ private:
 
 
     enum class builtin_cmd{
-        cd,alias,unalias,none
+        cd,alias,unalias,history,exit,none
     };
 
 	void init();
@@ -32,6 +32,8 @@ private:
     void builtin_cd(const argv_t& argv);
     void builtin_alias(const argv_t& argv);
     void builtin_unalias(const argv_t& argv);
+    void builtin_history(const argv_t& argv);
+    void builtin_exit();
 
     void alias(std::string& str);
 
