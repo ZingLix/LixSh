@@ -238,7 +238,7 @@ void Shell::builtin_cd(const argv_t& argv) {
 void Shell::builtin_alias(const argv_t& argv) {
     if(argv.size()<2) {
         for(auto& p:alias_map_){
-            cout<< p->first<<"\t: "<<p->second<<endl;
+            cout<< p.first<<"\t: "<<p.second<<endl;
         }
         return;
     }
