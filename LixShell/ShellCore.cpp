@@ -237,7 +237,9 @@ void Shell::builtin_cd(const argv_t& argv) {
 
 void Shell::builtin_alias(const argv_t& argv) {
     if(argv.size()<2) {
-        cout << "No enough arguments."<<endl;
+        for(auto& p:alias_map_){
+            cout<< p->first<<"\t: "<<p->second<<endl;
+        }
         return;
     }
     string src, target;
